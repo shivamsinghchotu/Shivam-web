@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>DM WIN Injector Overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin:0; padding:0; height:100%; width:100%; background:#000; }
+  #bg { position:fixed; inset:0; width:100%; height:100%; border:0; }
+
+  .mm-overlay{
+    position:fixed; top:12px; left:50%; transform:translateX(-50%);
+    width:92%; max-width:360px; z-index:9999999;
+    background:rgba(0,0,0,.85); border-radius:18px; padding:10px 12px 12px;
+    box-shadow:0 0 28px #00ff88, inset 0 0 18px rgba(0,255,136,.35);
+    backdrop-filter: blur(4px);
+    animation:pulse 2s infinite;
+  }
+  .mm-title{ text-align:center; color:#00ff88; font-weight:800; letter-spacing:2px; font-size:12px; text-shadow:0 0 10px #00ff88; margin-bottom:8px;}
+  .mm-row{ display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:8px;}
+  .mm-card{ background:#06160f; border-radius:12px; border:2px solid #00ff88; padding:6px; text-align:center; box-shadow:0 0 10px #00ff88;}
+  .mm-label{ font-size:10px; color:#9fffd6; opacity:.9;}
+  .mm-val{ margin-top:2px; font-size:18px; font-weight:900; color:#00ff88; text-shadow:0 0 10px #00ff88;}
+  .mm-pred .mm-val{ font-size:22px;}
+  .mm-node .mm-val{ color:#ff4d4d; text-shadow:0 0 10px #ff4d4d;}
+  .mm-level{ margin-top:8px; text-align:center; padding:6px 8px; border-radius:10px; border:1px solid #00ff88; color:#00ff88; font-weight:700; letter-spacing:1px; box-shadow:0 0 8px #00ff88; text-shadow:0 0 8px #00ff88; font-size:11px;}
+
+  .mm-wl{ margin-top:8px; display:flex; gap:6px; }
+  .mm-wl div{
+    flex:1; text-align:center; padding:6px; border-radius:10px;
+    font-weight:800; font-size:12px;
+  }
+  .mm-win{ border:1px solid #00ff88; color:#00ff88; box-shadow:0 0 8px #00ff88; }
+  .mm-loss{ border:1px solid #ff4d4d; color:#ff4d4d; box-shadow:0 0 8px #ff4d4d; }
+
+  @keyframes pulse{0%{box-shadow:0 0 14px #00ff88}50%{box-shadow:0 0 28px #00ff88}100%{box-shadow:0 0 14px #00ff88}}
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<iframe id="bg" src="https://www.dmwin3.com/#/register?invitationCode=117823596793"></iframe>
+
+<!-- Overlay UI -->
+<div class="mm-overlay">
+  <div class="mm-title">⚡ MASTER MOD V 1.7 ⚡</div>
+  <div class="mm-row">
+    <div class="mm-card">
+      <div class="mm-label">PERIOD</div>
+      <div class="mm-val" id="mmPeriod">--</div>
+    </div>
+    <div class="mm-card mm-pred">
+      <div class="mm-label">PREDICTION</div>
+      <div class="mm-val" id="mmPred">--</div>
+    </div>
+    <div class="mm-card mm-node">
+      <div class="mm-label">NODE</div>
+      <div class="mm-val" id="mmNode">--</div>
+    </div>
+  </div>
+  <div class="mm-level">UNDER 1 LEVEL WINNING</div>
+
+  <div class="mm-wl">
+    <div class="mm-win">WIN: <span id="mmWin">0</span></div>
+    <div class="mm-loss">LOSS: <span id="mmLoss">0</span></div>
+  </div>
+</div>
+
+<script>
+  // ===== CONFIG (SET BASE UTC TIME FOR PERIOD SYNC) =====
+  // Example: 1:44 PM IST = 08:14 UTC
+  const BASE_PERIOD = 495;
+  const BASE_UTC = new Date(Date.UTC(2026, 1, 4, 8, 14, 0)); // <- aaj ki date set kar lo
+
+  // ===== STATE =====
+  let monsterLastPred = null;
+  let monsterLevel = 0;
+  let monsterBias = Math.random() > 0.5 ? "BIG" : "SMALL";
+
+  function getCurrentPeriodUTC() {
+    const now = new Date();
+    const diffMs = now.getTime() - BASE_UTC.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    return BASE_PERIOD + diffMin;
+  }
+
+  function pickTwoDistinct(min, max) {
+    let a = Math.floor(Math.random() * (max - min + 1)) + min;
+    let b = Math.floor(Math.random() * (max - min + 1)) + min;
+    while (b === a) {
+      b = Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    return [a, b].sort((x, y) => x - y);
+  }
+
+  // ===== MONSTER LOGIC (UNDER 1–2 LEVEL FIX) =====
+  function under1Prediction() {
+    const t = Math.floor(Date.now() / 30000); // change pattern every 30s
+    const noise = t % 3; // 0,1,2
+
+    let pred = monsterBias;
+    if (noise === 1) pred = (monsterBias === "BIG") ? "SMALL" : "BIG";
+    if (noise === 2) pred = Math.random() > 0.5 ? "BIG" : "SMALL";
+
+    // UNDER 1–2 LEVEL FIX
+    if (monsterLastPred === pred) {
+      monsterLevel++;
+      if (monsterLevel >= 2) {
+        pred = (pred === "BIG") ? "SMALL" : "BIG";
+        monsterLevel = 0;
+        monsterBias = pred; // shift bias after flip
+      }
+    } else {
+      monsterLevel = 0;
+    }
+
+    monsterLastPred = pred;
+
+    let nums;
+    if (pred === "SMALL") nums = pickTwoDistinct(0, 4);
+    else nums = pickTwoDistinct(5, 9);
+
+    return { pred, nums };
+  }
+
+  // ===== SAFE RENDER =====
+  function render() {
+    const periodEl = document.getElementById("mmPeriod");
+    const predEl   = document.getElementById("mmPred");
+    const nodeEl   = document.getElementById("mmNode");
+    if (!periodEl || !predEl || !nodeEl) return;
+
+    const period = getCurrentPeriodUTC();
+    const { pred, nums } = under1Prediction();
+
+    periodEl.innerText = String(period);
+    predEl.innerText   = String(pred);
+    nodeEl.innerText   = nums.join(", ");
+  }
+
+  // ===== UTC-ALIGNED 60s TIMER =====
+  function startUtcAlignedTimer() {
+    function tick() {
+      render();
+      const now = new Date();
+      const msToNextMinute = 60000 - (now.getUTCSeconds() * 1000 + now.getUTCMilliseconds());
+      setTimeout(tick, msToNextMinute);
+    }
+    tick();
+  }
+
+  // 🚀 Start when DOM ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startUtcAlignedTimer);
+  } else {
+    startUtcAlignedTimer();
+  }
+</script>
